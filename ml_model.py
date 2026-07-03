@@ -6,7 +6,6 @@ from sklearn.ensemble import RandomForestRegressor
 MODEL_PATH = "model.pkl"
 
 def train_and_save_model():
-    # Generate synthetic training data
     np.random.seed(42)
     n = 500
     voltage  = np.random.uniform(210, 230, n)
@@ -23,11 +22,17 @@ def train_and_save_model():
     print("Model trained and saved.")
     return model
 
+# Cache the model in memory — load once, reuse every call
+_model = None
+
 def get_model():
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-    else:
-        return train_and_save_model()
+    global _model
+    if _model is None:
+        if os.path.exists(MODEL_PATH):
+            _model = joblib.load(MODEL_PATH)
+        else:
+            _model = train_and_save_model()
+    return _model
 
 def predict_power(voltage, current, hybrid_power):
     model = get_model()
