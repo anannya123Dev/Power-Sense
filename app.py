@@ -53,7 +53,9 @@ device_status = {
 def collection_loop():
     while True:
         try:
-            raw = get_api_data()
+            with devices_lock:
+                devices_snapshot = list(device_master)
+            raw = get_api_data(devices_snapshot)
             df  = clean_and_hybrid(raw)
             df["active"] = df["device"].map(lambda d: device_status.get(d, True))
 
