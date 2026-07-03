@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerSense — Compare</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="/static/css/theme.css">
+<script src="/static/js/theme-toggle.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#080b14;--surface:#0e1422;--surface2:#131929;--border:#1e2535;
+  --emerald:#10b981;--emerald-d:#059669;--emerald-glow:rgba(16,185,129,0.25);
+  --yellow:#f59e0b;--yellow-glow:rgba(245,158,11,0.2);
+  --orange:#f97316;--orange-glow:rgba(249,115,22,0.2);
+  --purple:#8b5cf6;--purple-glow:rgba(139,92,246,0.2);
+  --red:#ef4444;--red-glow:rgba(239,68,68,0.2);
+  --text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+  --font:'Outfit',sans-serif;
+}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+
+/* ── Sidebar ── */
+.sidebar{width:240px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;z-index:50;}
+.sidebar-brand{padding:24px 20px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);}
+.brand-icon{width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--emerald),var(--yellow));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 16px var(--emerald-glow);font-size:1.1em;}
+.brand-name{font-size:1.15em;font-weight:800;
+  background:linear-gradient(135deg,var(--text),var(--emerald));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sidebar-section{padding:16px 12px 8px;font-size:0.65em;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border-radius:10px;cursor:pointer;font-size:0.88em;font-weight:500;
+  color:var(--muted2);transition:all 0.2s;margin:0 4px;
+  border:1px solid transparent;text-decoration:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(16,185,129,0.1);color:var(--emerald);
+  border-color:rgba(16,185,129,0.2);}
+.nav-item .ni{width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;
+  border-radius:10px;background:var(--surface2);}
+.user-avatar{width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--purple),var(--emerald));
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.85em;font-weight:700;}
+.user-name{font-size:0.83em;font-weight:600;}
+.user-plan{font-size:0.7em;color:var(--emerald);}
+
+/* ── Main ── */
+.main{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── Topbar ── */
+.topbar{height:64px;background:rgba(8,11,20,0.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;position:sticky;top:0;z-index:40;}
+.topbar-left h2{font-size:1.05em;font-weight:700;}
+.topbar-left p{font-size:0.75em;color:var(--muted);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.live-pill{display:flex;align-items:center;gap:6px;
+  background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);
+  padding:5px 12px;border-radius:20px;font-size:0.78em;font-weight:600;color:var(--emerald);}
+.live-dot{width:6px;height:6px;background:var(--emerald);border-radius:50%;
+  animation:livePulse 1.4s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.6);}}
+.time-badge{font-size:0.78em;color:var(--muted);font-weight:500;
+  background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;}
+.icon-btn{width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1em;transition:all 0.2s;}
+.icon-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+
+/* ── Page ── */
+.page{padding:24px 28px;flex:1;}
+.page-section{display:none;}
+.page-section.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateX(6px);}to{opacity:1;transform:translateX(0);}}
+
+/* ── Banner ── */
+.banner{border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:14px;
+  margin-bottom:20px;font-size:0.9em;font-weight:600;border:1px solid;
+  animation:slideDown 0.4s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.banner.low   {background:rgba(16,185,129,0.07);border-color:rgba(16,185,129,0.25);color:var(--emerald);}
+.banner.medium{background:rgba(245,158,11,0.07);border-color:rgba(245,158,11,0.25);color:var(--yellow);}
+.banner.high  {background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.25);color:var(--red);}
+.banner-icon{font-size:1.4em;}
+.banner-text{flex:1;}
+.banner-sub{font-size:0.78em;font-weight:400;opacity:0.8;margin-top:2px;}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;position:relative;overflow:hidden;
+  transition:transform 0.25s,box-shadow 0.25s;cursor:default;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;}
+.kpi.k-em::before{background:linear-gradient(90deg,var(--emerald),var(--yellow));}
+.kpi.k-ye::before{background:linear-gradient(90deg,var(--yellow),var(--orange));}
+.kpi.k-pu::before{background:linear-gradient(90deg,var(--purple),var(--emerald));}
+.kpi.k-or::before{background:linear-gradient(90deg,var(--orange),var(--red));}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:1.2em;margin-bottom:14px;}
+.kpi.k-em .kpi-icon{background:rgba(16,185,129,0.12);}
+.kpi.k-ye .kpi-icon{background:rgba(245,158,11,0.12);}
+.kpi.k-pu .kpi-icon{background:rgba(139,92,246,0.12);}
+.kpi.k-or .kpi-icon{background:rgba(249,115,22,0.12);}
+.kpi-label{font-size:0.72em;font-weight:500;text-transform:uppercase;
+  letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;}
+.kpi-value{font-size:2em;font-weight:800;line-height:1;}
+.kpi.k-em .kpi-value{color:var(--emerald);}
+.kpi.k-ye .kpi-value{color:var(--yellow);}
+.kpi.k-pu .kpi-value{color:var(--purple);}
+.kpi.k-or .kpi-value{color:var(--orange);}
+.kpi-sub{font-size:0.74em;color:var(--muted);margin-top:6px;}
+
+/* ── Charts ── */
+.chart-row{display:grid;gap:16px;margin-bottom:16px;}
+.r2{grid-template-columns:2fr 1fr;}
+.r22{grid-template-columns:1fr 1fr;}
+.chart-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:22px;position:relative;overflow:hidden;}
+.chart-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--emerald),transparent);opacity:0.3;}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.chart-title{font-size:0.82em;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.06em;color:var(--muted2);}
+.chart-badge{font-size:0.7em;padding:3px 9px;border-radius:20px;font-weight:600;}
+.cb-g{background:rgba(16,185,129,0.12);color:var(--emerald);}
+.cb-y{background:rgba(245,158,11,0.12);color:var(--yellow);}
+
+/* ── Device table ── */
+.table-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:22px;margin-bottom:16px;overflow-x:auto;}
+.table-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.table-title{font-size:0.82em;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.06em;color:var(--muted2);}
+.table-hint{font-size:0.76em;color:var(--muted);margin-top:4px;margin-bottom:16px;line-height:1.5;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.7em;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;
+  color:var(--muted);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;font-size:0.87em;border-bottom:1px solid rgba(30,37,53,0.6);transition:background 0.15s;}
+tr:hover td{background:var(--surface2);}
+tr:last-child td{border-bottom:none;}
+.dev-name{font-weight:700;font-size:0.95em;}
+.dev-off-badge{font-size:0.68em;color:var(--red);margin-left:8px;
+  background:rgba(239,68,68,0.1);padding:2px 7px;border-radius:10px;border:1px solid rgba(239,68,68,0.2);}
+.mono{font-family:'Poppins',monospace;font-size:0.84em;color:var(--muted2);}
+.mono.em{color:var(--emerald);}
+
+/* Toggle */
+.switch{position:relative;display:inline-block;width:42px;height:24px;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:#1e2535;
+  border-radius:24px;transition:.3s;border:1px solid var(--border);}
+.slider:before{position:absolute;content:'';height:18px;width:18px;
+  left:2px;bottom:2px;background:var(--muted);border-radius:50%;transition:.3s;}
+input:checked+.slider{background:rgba(16,185,129,0.25);border-color:var(--emerald);}
+input:checked+.slider:before{transform:translateX(18px);background:var(--emerald);}
+
+/* Bar */
+.bar-wrap{background:var(--surface2);border-radius:20px;height:5px;width:90px;overflow:hidden;}
+.bar-fill{height:5px;border-radius:20px;transition:width 0.6s ease;}
+
+/* Pills */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.7em;font-weight:700;letter-spacing:0.04em;}
+.p-low {background:rgba(16,185,129,0.1);color:var(--emerald);border:1px solid rgba(16,185,129,0.2);}
+.p-med {background:rgba(245,158,11,0.1);color:var(--yellow);border:1px solid rgba(245,158,11,0.2);}
+.p-high{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+.p-off {background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid var(--border);}
+
+/* Button */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;
+  font-size:0.82em;font-weight:700;
+  background:linear-gradient(135deg,var(--emerald),var(--emerald-d));
+  color:white;text-decoration:none;border:none;cursor:pointer;
+  transition:all 0.2s;box-shadow:0 2px 12px var(--emerald-glow);}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 24px var(--emerald-glow);}
+
+/* Toast */
+#toast{position:fixed;bottom:28px;right:28px;z-index:999;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 18px;
+  display:flex;align-items:center;gap:10px;font-size:0.85em;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  transform:translateY(80px);opacity:0;
+  transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* Tip card */
+.tip-card{background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(245,158,11,0.06));
+  border:1px solid rgba(16,185,129,0.2);border-radius:14px;
+  padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
+.tip-icon{font-size:1.8em;flex-shrink:0;}
+.tip-title{font-size:0.85em;font-weight:700;color:var(--emerald);margin-bottom:3px;}
+.tip-text{font-size:0.81em;color:var(--muted2);line-height:1.6;}
+
+/* Carbon bar */
+.carbon-bar{height:8px;background:var(--surface2);border-radius:8px;margin-top:8px;overflow:hidden;}
+.carbon-fill{height:8px;border-radius:8px;
+  background:linear-gradient(90deg,var(--emerald),var(--yellow),var(--orange));
+  transition:width 0.8s ease;}
+
+/* Device cards grid */
+.device-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.dev-card{background:var(--surface);border-radius:16px;padding:20px;
+  transition:all 0.3s;border:1px solid var(--border);}
+.dev-card.on{border-color:rgba(16,185,129,0.3);}
+.dev-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.dev-card-emoji{font-size:2em;margin-bottom:6px;}
+.dev-card-name{font-weight:800;font-size:1em;margin-bottom:2px;}
+.dev-card-status{font-size:0.75em;color:var(--muted);}
+.dev-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dev-stat{background:var(--surface2);border-radius:10px;padding:10px;}
+.dev-stat-label{font-size:0.68em;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+.dev-stat-val{font-size:1.2em;font-weight:800;margin-top:3px;}
+
+/* Fade up */
+.fade-up{opacity:0;transform:translateY(14px);animation:fadeup 0.4s ease forwards;}
+@keyframes fadeup{to{opacity:1;transform:translateY(0);}}
+.d1{animation-delay:0.05s;}.d2{animation-delay:0.10s;}
+.d3{animation-delay:0.15s;}.d4{animation-delay:0.20s;}
+
+/* Section headers */
+.sec-title{font-size:1.1em;font-weight:800;margin-bottom:6px;}
+.sec-sub{font-size:0.85em;color:var(--muted);margin-bottom:24px;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .r2,.r22{grid-template-columns:1fr;}
+  .device-cards-grid{grid-template-columns:1fr 1fr;}
+  .page{padding:16px;}
+}
+
+/* ── Compare-page specific ── */
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.compare-col{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;}
+.compare-col.reality::before{content:'';display:block;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,#3b82f6,#8b5cf6);margin:-22px -22px 18px -22px;}
+.compare-col.prediction::before{content:'';display:block;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--emerald),var(--yellow));margin:-22px -22px 18px -22px;}
+.compare-head{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.compare-badge{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:1.2em;}
+.compare-col.reality .compare-badge{background:rgba(59,130,246,0.12);}
+.compare-col.prediction .compare-badge{background:rgba(16,185,129,0.12);}
+.compare-title{font-weight:800;font-size:1.05em;}
+.compare-sub{font-size:0.76em;color:var(--muted);}
+.metric-row{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.metric-row:last-child{border-bottom:none;}
+.metric-label{font-size:0.82em;color:var(--muted2);}
+.metric-value{font-size:1em;font-weight:700;}
+.diff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.diff-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:18px;text-align:center;}
+.diff-card .dv{font-size:1.5em;font-weight:800;}
+.diff-card .dl{font-size:0.7em;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;}
+.diff-pos{color:var(--red);}
+.diff-neg{color:var(--emerald);}
+@media(max-width:900px){.compare-grid{grid-template-columns:1fr;} .diff-grid{grid-template-columns:1fr 1fr;}}
+
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <a class="sidebar-brand" href="/" style="text-decoration:none;color:inherit;">
+    <div class="brand-icon">⚡</div>
+    <span class="brand-name">PowerSense</span>
+  </a>
+
+  <div class="sidebar-section">Main</div>
+  <a class="nav-item" href="/">
+    <span class="ni">🏠</span> Home
+  </a>
+  <a class="nav-item" href="/dashboard">
+    <span class="ni">📊</span> Dashboard
+  </a>
+  <a class="nav-item" href="/history">
+    <span class="ni">📋</span> History
+  </a>
+  <a class="nav-item" href="/prediction">
+    <span class="ni">🧠</span> Prediction
+  </a>
+  <a class="nav-item active">
+    <span class="ni">⚖️</span> Compare
+  </a>
+
+  <div class="sidebar-section">Tools</div>
+  <a class="nav-item" href="/guide">
+    <span class="ni">📖</span> Guide
+  </a>
+  <a class="nav-item" href="/export">
+    <span class="ni">⬇</span> Export CSV
+  </a>
+
+  <div class="sidebar-bottom">
+    <div class="user-pill" data-logout style="cursor:pointer;" title="Click to log out">
+      <div class="user-avatar">U</div>
+      <div class="user-info">
+        <div class="user-name">User</div>
+        <div class="user-plan">● Logout</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle sidebar">☰</div>
+      <div>
+        <h2>Compare</h2>
+        <p>Reality (Shelly API) vs Prediction (your virtual household)</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-pill"><div class="live-dot"></div> LIVE</div>
+      <div class="time-badge" id="clock">--:--:--</div>
+      <div class="icon-btn" title="Toggle theme" id="themeToggle">🌙</div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="page-section active">
+
+      <div class="sec-title">Reality vs Prediction</div>
+      <div class="sec-sub">See how closely your simulated virtual household tracks your real Shelly-powered readings.</div>
+
+      <!-- Difference summary -->
+      <div class="diff-grid">
+        <div class="diff-card fade-up d1">
+          <div class="dv" id="diffPower">—</div>
+          <div class="dl">Power Difference</div>
+        </div>
+        <div class="diff-card fade-up d2">
+          <div class="dv" id="diffUnits">—</div>
+          <div class="dl">Monthly Units Diff</div>
+        </div>
+        <div class="diff-card fade-up d3">
+          <div class="dv" id="diffBill">—</div>
+          <div class="dl">Monthly Bill Diff</div>
+        </div>
+        <div class="diff-card fade-up d4">
+          <div class="dv" id="diffPercent">—</div>
+          <div class="dl">% Difference</div>
+        </div>
+      </div>
+
+      <!-- Side by side cards -->
+      <div class="compare-grid">
+        <div class="compare-col reality">
+          <div class="compare-head">
+            <div class="compare-badge">🔌</div>
+            <div>
+              <div class="compare-title">Reality</div>
+              <div class="compare-sub">Live Shelly Smart Plug API data</div>
+            </div>
+          </div>
+          <div class="metric-row"><span class="metric-label">Current Power</span><span class="metric-value" id="realCurrent">—</span></div>
+          <div class="metric-row"><span class="metric-label">Category</span><span class="metric-value" id="realCategory">—</span></div>
+          <div class="metric-row"><span class="metric-label">Estimated Daily Units</span><span class="metric-value" id="realDaily">—</span></div>
+          <div class="metric-row"><span class="metric-label">Estimated Monthly Units</span><span class="metric-value" id="realMonthly">—</span></div>
+          <div class="metric-row"><span class="metric-label">Estimated Monthly Bill</span><span class="metric-value" id="realBill">—</span></div>
+        </div>
+
+        <div class="compare-col prediction">
+          <div class="compare-head">
+            <div class="compare-badge">🧠</div>
+            <div>
+              <div class="compare-title">Prediction</div>
+              <div class="compare-sub">Your virtual household simulation</div>
+            </div>
+          </div>
+          <div class="metric-row"><span class="metric-label">Current Power</span><span class="metric-value" id="predCurrent">—</span></div>
+          <div class="metric-row"><span class="metric-label">Active Devices</span><span class="metric-value" id="predActive">—</span></div>
+          <div class="metric-row"><span class="metric-label">Daily Units</span><span class="metric-value" id="predDaily">—</span></div>
+          <div class="metric-row"><span class="metric-label">Monthly Units</span><span class="metric-value" id="predMonthly">—</span></div>
+          <div class="metric-row"><span class="metric-label">Monthly Bill</span><span class="metric-value" id="predBill">—</span></div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-row r2">
+        <div class="chart-card">
+          <div class="chart-head">
+            <span class="chart-title">Live Power — Reality vs Prediction</span>
+            <span class="chart-badge cb-g">last 20 readings</span>
+          </div>
+          <canvas id="cmpLineChart" height="90"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <span class="chart-title">Monthly Units Comparison</span>
+            <span class="chart-badge cb-y">kWh</span>
+          </div>
+          <canvas id="cmpBarChart" height="90"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-row r22">
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Reality — Device Split</span></div>
+          <canvas id="cmpPieReal" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Prediction — Device Split</span></div>
+          <canvas id="cmpPiePred" height="100"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script type="module">
+import { watchAuth, logOut } from "/static/js/auth.js";
+import { listenDevices, getSettings } from "/static/js/firestore-service.js";
+import { computeSnapshot } from "/static/js/prediction-engine.js";
+
+document.documentElement.style.visibility = "hidden";
+
+let uid = null;
+let devices = [];
+let tariff = 6.5;
+let cmpHistory = { labels:[], real:[], pred:[] };
+
+function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
+setInterval(tickClock, 1000); tickClock();
+
+const PALETTE = ['#10b981','#f59e0b','#8b5cf6','#f97316','#3b82f6','#ec4899','#ef4444','#facc15'];
+
+const lineChart = new Chart(document.getElementById('cmpLineChart').getContext('2d'), {
+  type:'line',
+  data:{ labels:[], datasets:[
+    { label:'Reality', data:[], borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.08)', fill:true, tension:0.35, pointRadius:0 },
+    { label:'Prediction', data:[], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.08)', fill:true, tension:0.35, pointRadius:0 }
+  ]},
+  options:{ responsive:true, plugins:{legend:{labels:{color:'#94a3b8'}}},
+    scales:{ x:{display:false}, y:{beginAtZero:true, grid:{color:'rgba(255,255,255,0.05)'}} } }
+});
+
+const barChart = new Chart(document.getElementById('cmpBarChart').getContext('2d'), {
+  type:'bar',
+  data:{ labels:['Daily','Weekly','Monthly'], datasets:[
+    { label:'Reality', data:[0,0,0], backgroundColor:'#3b82f6' },
+    { label:'Prediction', data:[0,0,0], backgroundColor:'#10b981' }
+  ]},
+  options:{ responsive:true, plugins:{legend:{labels:{color:'#94a3b8'}}},
+    scales:{ y:{beginAtZero:true, grid:{color:'rgba(255,255,255,0.05)'}} } }
+});
+
+const pieReal = new Chart(document.getElementById('cmpPieReal').getContext('2d'), {
+  type:'doughnut', data:{ labels:[], datasets:[{ data:[], backgroundColor:PALETTE }] },
+  options:{ responsive:true, plugins:{legend:{position:'bottom', labels:{color:'#94a3b8', boxWidth:10, font:{size:10}}}} }
+});
+const piePred = new Chart(document.getElementById('cmpPiePred').getContext('2d'), {
+  type:'doughnut', data:{ labels:[], datasets:[{ data:[], backgroundColor:PALETTE }] },
+  options:{ responsive:true, plugins:{legend:{position:'bottom', labels:{color:'#94a3b8', boxWidth:10, font:{size:10}}}} }
+});
+
+function fmtKwh(n){ return n.toFixed(2) + ' kWh'; }
+function fmtRs(n){ return '₹' + n.toFixed(2); }
+
+async function tick(){
+  let real = { current:0, category:'—', daily:0, monthly:0, bill:0, devices:[] };
+  try {
+    const res = await fetch('/api/data');
+    const d = await res.json();
+    real.current = d.total_predicted || 0;
+    real.category = d.category || '—';
+    // Reality's bill_calculator assumes an hourly rate; scale current power to daily/monthly units
+    real.daily = (real.current * 24) / 1000;
+    real.monthly = real.daily * 30;
+    real.bill = real.monthly * tariff;
+    real.devices = (d.devices || []).filter(x=>x.active !== false)
+      .map(x=>({ name:x.device, kwh: x.hybrid_power || 0 }));
+  } catch(e) { /* Reality API not reachable yet */ }
+
+  const pred = devices.length ? computeSnapshot(devices, tariff) : null;
+  const predCurrent = pred ? pred.currentWatts : 0;
+  const predDaily = pred ? pred.dailyKwh : 0;
+  const predMonthly = pred ? pred.monthlyKwh : 0;
+  const predBill = pred ? pred.monthlyBill : 0;
+
+  // ── Cards ──
+  document.getElementById('realCurrent').textContent = Math.round(real.current) + ' W';
+  document.getElementById('realCategory').textContent = real.category;
+  document.getElementById('realDaily').textContent = fmtKwh(real.daily);
+  document.getElementById('realMonthly').textContent = fmtKwh(real.monthly);
+  document.getElementById('realBill').textContent = fmtRs(real.bill);
+
+  document.getElementById('predCurrent').textContent = Math.round(predCurrent) + ' W';
+  document.getElementById('predActive').textContent = devices.filter(d=>d.isOn).length + ' / ' + devices.length;
+  document.getElementById('predDaily').textContent = fmtKwh(predDaily);
+  document.getElementById('predMonthly').textContent = fmtKwh(predMonthly);
+  document.getElementById('predBill').textContent = fmtRs(predBill);
+
+  // ── Diff summary ──
+  const powerDiff = predCurrent - real.current;
+  const unitsDiff = predMonthly - real.monthly;
+  const billDiff = predBill - real.bill;
+  const pctDiff = real.current > 0 ? (powerDiff / real.current) * 100 : 0;
+
+  const diffPowerEl = document.getElementById('diffPower');
+  diffPowerEl.textContent = (powerDiff>=0?'+':'') + Math.round(powerDiff) + ' W';
+  diffPowerEl.className = 'dv ' + (powerDiff>=0 ? 'diff-pos':'diff-neg');
+
+  const diffUnitsEl = document.getElementById('diffUnits');
+  diffUnitsEl.textContent = (unitsDiff>=0?'+':'') + unitsDiff.toFixed(1) + ' kWh';
+  diffUnitsEl.className = 'dv ' + (unitsDiff>=0 ? 'diff-pos':'diff-neg');
+
+  const diffBillEl = document.getElementById('diffBill');
+  diffBillEl.textContent = (billDiff>=0?'+':'') + fmtRs(billDiff);
+  diffBillEl.className = 'dv ' + (billDiff>=0 ? 'diff-pos':'diff-neg');
+
+  const diffPctEl = document.getElementById('diffPercent');
+  diffPctEl.textContent = (pctDiff>=0?'+':'') + pctDiff.toFixed(1) + '%';
+  diffPctEl.className = 'dv ' + (pctDiff>=0 ? 'diff-pos':'diff-neg');
+
+  // ── Line chart (last 20 ticks) ──
+  const t = new Date().toLocaleTimeString().slice(0,5);
+  cmpHistory.labels.push(t); cmpHistory.real.push(Math.round(real.current)); cmpHistory.pred.push(Math.round(predCurrent));
+  if (cmpHistory.labels.length > 20){ cmpHistory.labels.shift(); cmpHistory.real.shift(); cmpHistory.pred.shift(); }
+  lineChart.data.labels = cmpHistory.labels;
+  lineChart.data.datasets[0].data = cmpHistory.real;
+  lineChart.data.datasets[1].data = cmpHistory.pred;
+  lineChart.update();
+
+  // ── Bar chart ──
+  barChart.data.datasets[0].data = [real.daily, real.daily*7, real.monthly];
+  barChart.data.datasets[1].data = [predDaily, predDaily*7, predMonthly];
+  barChart.update();
+
+  // ── Pie charts ──
+  pieReal.data.labels = real.devices.map(x=>x.name);
+  pieReal.data.datasets[0].data = real.devices.map(x=>x.kwh.toFixed(2));
+  pieReal.update();
+
+  if (pred){
+    piePred.data.labels = pred.contributions.map(c=>c.name);
+    piePred.data.datasets[0].data = pred.contributions.map(c=>c.dailyKwh.toFixed(3));
+    piePred.update();
+  }
+}
+
+watchAuth(async (user)=>{
+  if (!user){ window.location.href = '/'; return; }
+  uid = user.uid;
+  document.documentElement.style.visibility = 'visible';
+
+  document.querySelectorAll('.user-name').forEach(el=>el.textContent=user.email);
+  document.querySelectorAll('.user-avatar').forEach(el=>el.textContent=(user.email||'U').charAt(0).toUpperCase());
+  document.querySelectorAll('[data-logout]').forEach(el=>{
+    el.addEventListener('click', ()=>{ logOut().then(()=>window.location.href='/'); });
+  });
+
+  const settings = await getSettings(uid).catch((err)=>{
+    console.error('getSettings failed:', err);
+    return { tariffPerKwh: 6.5 };
+  });
+  tariff = settings.tariffPerKwh || 6.5;
+
+  listenDevices(uid, (list)=>{ devices = list; }, (err)=>{
+    console.error('listenDevices failed:', err);
+  });
+
+  tick();
+  setInterval(tick, 5000);
+});
+</script>
+<script src="/static/js/sidebar-toggle.js"></script>
+</body>
+</html>
+

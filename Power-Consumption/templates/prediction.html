@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerSense — Prediction</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="/static/css/theme.css">
+<script src="/static/js/theme-toggle.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#080b14;--surface:#0e1422;--surface2:#131929;--border:#1e2535;
+  --emerald:#10b981;--emerald-d:#059669;--emerald-glow:rgba(16,185,129,0.25);
+  --yellow:#f59e0b;--yellow-glow:rgba(245,158,11,0.2);
+  --orange:#f97316;--orange-glow:rgba(249,115,22,0.2);
+  --purple:#8b5cf6;--purple-glow:rgba(139,92,246,0.2);
+  --red:#ef4444;--red-glow:rgba(239,68,68,0.2);
+  --text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+  --font:'Outfit',sans-serif;
+}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+
+/* ── Sidebar ── */
+.sidebar{width:240px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;z-index:50;}
+.sidebar-brand{padding:24px 20px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);}
+.brand-icon{width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--emerald),var(--yellow));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 16px var(--emerald-glow);font-size:1.1em;}
+.brand-name{font-size:1.15em;font-weight:800;
+  background:linear-gradient(135deg,var(--text),var(--emerald));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sidebar-section{padding:16px 12px 8px;font-size:0.65em;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border-radius:10px;cursor:pointer;font-size:0.88em;font-weight:500;
+  color:var(--muted2);transition:all 0.2s;margin:0 4px;
+  border:1px solid transparent;text-decoration:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(16,185,129,0.1);color:var(--emerald);
+  border-color:rgba(16,185,129,0.2);}
+.nav-item .ni{width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
+.user-pill{display:flex;align-items:center;gap:10px;padding:10px;
+  border-radius:10px;background:var(--surface2);}
+.user-avatar{width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--purple),var(--emerald));
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.85em;font-weight:700;}
+.user-name{font-size:0.83em;font-weight:600;}
+.user-plan{font-size:0.7em;color:var(--emerald);}
+
+/* ── Main ── */
+.main{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── Topbar ── */
+.topbar{height:64px;background:rgba(8,11,20,0.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;position:sticky;top:0;z-index:40;}
+.topbar-left h2{font-size:1.05em;font-weight:700;}
+.topbar-left p{font-size:0.75em;color:var(--muted);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.live-pill{display:flex;align-items:center;gap:6px;
+  background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);
+  padding:5px 12px;border-radius:20px;font-size:0.78em;font-weight:600;color:var(--emerald);}
+.live-dot{width:6px;height:6px;background:var(--emerald);border-radius:50%;
+  animation:livePulse 1.4s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.6);}}
+.time-badge{font-size:0.78em;color:var(--muted);font-weight:500;
+  background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;}
+.icon-btn{width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1em;transition:all 0.2s;}
+.icon-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+
+/* ── Page ── */
+.page{padding:24px 28px;flex:1;}
+.page-section{display:none;}
+.page-section.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateX(6px);}to{opacity:1;transform:translateX(0);}}
+
+/* ── Banner ── */
+.banner{border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:14px;
+  margin-bottom:20px;font-size:0.9em;font-weight:600;border:1px solid;
+  animation:slideDown 0.4s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.banner.low   {background:rgba(16,185,129,0.07);border-color:rgba(16,185,129,0.25);color:var(--emerald);}
+.banner.medium{background:rgba(245,158,11,0.07);border-color:rgba(245,158,11,0.25);color:var(--yellow);}
+.banner.high  {background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.25);color:var(--red);}
+.banner-icon{font-size:1.4em;}
+.banner-text{flex:1;}
+.banner-sub{font-size:0.78em;font-weight:400;opacity:0.8;margin-top:2px;}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;position:relative;overflow:hidden;
+  transition:transform 0.25s,box-shadow 0.25s;cursor:default;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;}
+.kpi.k-em::before{background:linear-gradient(90deg,var(--emerald),var(--yellow));}
+.kpi.k-ye::before{background:linear-gradient(90deg,var(--yellow),var(--orange));}
+.kpi.k-pu::before{background:linear-gradient(90deg,var(--purple),var(--emerald));}
+.kpi.k-or::before{background:linear-gradient(90deg,var(--orange),var(--red));}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:1.2em;margin-bottom:14px;}
+.kpi.k-em .kpi-icon{background:rgba(16,185,129,0.12);}
+.kpi.k-ye .kpi-icon{background:rgba(245,158,11,0.12);}
+.kpi.k-pu .kpi-icon{background:rgba(139,92,246,0.12);}
+.kpi.k-or .kpi-icon{background:rgba(249,115,22,0.12);}
+.kpi-label{font-size:0.72em;font-weight:500;text-transform:uppercase;
+  letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;}
+.kpi-value{font-size:2em;font-weight:800;line-height:1;}
+.kpi.k-em .kpi-value{color:var(--emerald);}
+.kpi.k-ye .kpi-value{color:var(--yellow);}
+.kpi.k-pu .kpi-value{color:var(--purple);}
+.kpi.k-or .kpi-value{color:var(--orange);}
+.kpi-sub{font-size:0.74em;color:var(--muted);margin-top:6px;}
+
+/* ── Charts ── */
+.chart-row{display:grid;gap:16px;margin-bottom:16px;}
+.r2{grid-template-columns:2fr 1fr;}
+.r22{grid-template-columns:1fr 1fr;}
+.chart-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:22px;position:relative;overflow:hidden;}
+.chart-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--emerald),transparent);opacity:0.3;}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.chart-title{font-size:0.82em;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.06em;color:var(--muted2);}
+.chart-badge{font-size:0.7em;padding:3px 9px;border-radius:20px;font-weight:600;}
+.cb-g{background:rgba(16,185,129,0.12);color:var(--emerald);}
+.cb-y{background:rgba(245,158,11,0.12);color:var(--yellow);}
+
+/* ── Device table ── */
+.table-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:22px;margin-bottom:16px;overflow-x:auto;}
+.table-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.table-title{font-size:0.82em;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.06em;color:var(--muted2);}
+.table-hint{font-size:0.76em;color:var(--muted);margin-top:4px;margin-bottom:16px;line-height:1.5;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.7em;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;
+  color:var(--muted);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;font-size:0.87em;border-bottom:1px solid rgba(30,37,53,0.6);transition:background 0.15s;}
+tr:hover td{background:var(--surface2);}
+tr:last-child td{border-bottom:none;}
+.dev-name{font-weight:700;font-size:0.95em;}
+.dev-off-badge{font-size:0.68em;color:var(--red);margin-left:8px;
+  background:rgba(239,68,68,0.1);padding:2px 7px;border-radius:10px;border:1px solid rgba(239,68,68,0.2);}
+.mono{font-family:'Poppins',monospace;font-size:0.84em;color:var(--muted2);}
+.mono.em{color:var(--emerald);}
+
+/* Toggle */
+.switch{position:relative;display:inline-block;width:42px;height:24px;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:#1e2535;
+  border-radius:24px;transition:.3s;border:1px solid var(--border);}
+.slider:before{position:absolute;content:'';height:18px;width:18px;
+  left:2px;bottom:2px;background:var(--muted);border-radius:50%;transition:.3s;}
+input:checked+.slider{background:rgba(16,185,129,0.25);border-color:var(--emerald);}
+input:checked+.slider:before{transform:translateX(18px);background:var(--emerald);}
+
+/* Bar */
+.bar-wrap{background:var(--surface2);border-radius:20px;height:5px;width:90px;overflow:hidden;}
+.bar-fill{height:5px;border-radius:20px;transition:width 0.6s ease;}
+
+/* Pills */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.7em;font-weight:700;letter-spacing:0.04em;}
+.p-low {background:rgba(16,185,129,0.1);color:var(--emerald);border:1px solid rgba(16,185,129,0.2);}
+.p-med {background:rgba(245,158,11,0.1);color:var(--yellow);border:1px solid rgba(245,158,11,0.2);}
+.p-high{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+.p-off {background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid var(--border);}
+
+/* Button */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;
+  font-size:0.82em;font-weight:700;
+  background:linear-gradient(135deg,var(--emerald),var(--emerald-d));
+  color:white;text-decoration:none;border:none;cursor:pointer;
+  transition:all 0.2s;box-shadow:0 2px 12px var(--emerald-glow);}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 24px var(--emerald-glow);}
+
+/* Toast */
+#toast{position:fixed;bottom:28px;right:28px;z-index:999;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 18px;
+  display:flex;align-items:center;gap:10px;font-size:0.85em;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  transform:translateY(80px);opacity:0;
+  transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* Tip card */
+.tip-card{background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(245,158,11,0.06));
+  border:1px solid rgba(16,185,129,0.2);border-radius:14px;
+  padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
+.tip-icon{font-size:1.8em;flex-shrink:0;}
+.tip-title{font-size:0.85em;font-weight:700;color:var(--emerald);margin-bottom:3px;}
+.tip-text{font-size:0.81em;color:var(--muted2);line-height:1.6;}
+
+/* Carbon bar */
+.carbon-bar{height:8px;background:var(--surface2);border-radius:8px;margin-top:8px;overflow:hidden;}
+.carbon-fill{height:8px;border-radius:8px;
+  background:linear-gradient(90deg,var(--emerald),var(--yellow),var(--orange));
+  transition:width 0.8s ease;}
+
+/* Device cards grid */
+.device-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.dev-card{background:var(--surface);border-radius:16px;padding:20px;
+  transition:all 0.3s;border:1px solid var(--border);}
+.dev-card.on{border-color:rgba(16,185,129,0.3);}
+.dev-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.dev-card-emoji{font-size:2em;margin-bottom:6px;}
+.dev-card-name{font-weight:800;font-size:1em;margin-bottom:2px;}
+.dev-card-status{font-size:0.75em;color:var(--muted);}
+.dev-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dev-stat{background:var(--surface2);border-radius:10px;padding:10px;}
+.dev-stat-label{font-size:0.68em;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+.dev-stat-val{font-size:1.2em;font-weight:800;margin-top:3px;}
+
+/* Fade up */
+.fade-up{opacity:0;transform:translateY(14px);animation:fadeup 0.4s ease forwards;}
+@keyframes fadeup{to{opacity:1;transform:translateY(0);}}
+.d1{animation-delay:0.05s;}.d2{animation-delay:0.10s;}
+.d3{animation-delay:0.15s;}.d4{animation-delay:0.20s;}
+
+/* Section headers */
+.sec-title{font-size:1.1em;font-weight:800;margin-bottom:6px;}
+.sec-sub{font-size:0.85em;color:var(--muted);margin-bottom:24px;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .r2,.r22{grid-template-columns:1fr;}
+  .device-cards-grid{grid-template-columns:1fr 1fr;}
+  .page{padding:16px;}
+}
+
+/* ── Prediction-page specific ── */
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:22px;margin-bottom:16px;}
+.form-grid{display:grid;grid-template-columns:1.4fr 0.8fr 0.8fr 1fr auto auto;gap:12px;align-items:end;}
+.form-field label{display:block;font-size:0.72em;color:var(--muted);margin-bottom:6px;
+  text-transform:uppercase;letter-spacing:0.06em;}
+.form-field input,.form-field select{width:100%;padding:10px 12px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  font-family:var(--font);font-size:0.88em;outline:none;transition:border-color 0.2s;}
+.form-field input:focus,.form-field select:focus{border-color:var(--emerald);}
+.tariff-row{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:16px;
+  border-top:1px solid var(--border);flex-wrap:wrap;}
+.tariff-row label{font-size:0.8em;color:var(--muted);}
+.tariff-row input{width:100px;padding:8px 10px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);color:var(--text);font-family:var(--font);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-state .ei{font-size:2.4em;margin-bottom:10px;}
+.row-actions{display:flex;gap:8px;}
+.icon-action{width:30px;height:30px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:0.85em;transition:all 0.2s;}
+.icon-action:hover{border-color:var(--emerald);color:var(--emerald);}
+.icon-action.danger:hover{border-color:var(--red);color:var(--red);}
+@media(max-width:1100px){.form-grid{grid-template-columns:1fr 1fr;}}
+
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <a class="sidebar-brand" href="/" style="text-decoration:none;color:inherit;">
+    <div class="brand-icon">⚡</div>
+    <span class="brand-name">PowerSense</span>
+  </a>
+
+  <div class="sidebar-section">Main</div>
+  <a class="nav-item" href="/">
+    <span class="ni">🏠</span> Home
+  </a>
+  <a class="nav-item" href="/dashboard">
+    <span class="ni">📊</span> Dashboard
+  </a>
+  <a class="nav-item" href="/history">
+    <span class="ni">📋</span> History
+  </a>
+  <a class="nav-item active">
+    <span class="ni">🧠</span> Prediction
+  </a>
+  <a class="nav-item" href="/compare">
+    <span class="ni">⚖️</span> Compare
+  </a>
+
+  <div class="sidebar-section">Tools</div>
+  <a class="nav-item" href="/guide">
+    <span class="ni">📖</span> Guide
+  </a>
+  <a class="nav-item" href="/export">
+    <span class="ni">⬇</span> Export CSV
+  </a>
+
+  <div class="sidebar-bottom">
+    <div class="user-pill" data-logout style="cursor:pointer;" title="Click to log out">
+      <div class="user-avatar">U</div>
+      <div class="user-info">
+        <div class="user-name">User</div>
+        <div class="user-plan">● Logout</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle sidebar">☰</div>
+      <div>
+        <h2>Prediction</h2>
+        <p>Your virtual household — simulated live every 5s</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-pill"><div class="live-dot"></div> SIMULATING</div>
+      <div class="time-badge" id="clock">--:--:--</div>
+      <div class="icon-btn" title="Toggle theme" id="themeToggle">🌙</div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="page-section active">
+
+      <div class="sec-title">Virtual Household</div>
+      <div class="sec-sub">Add the devices in your home and PowerSense will simulate live energy consumption and estimate your bill — no hardware required.</div>
+      <div id="firestoreErrorBanner" style="display:none;background:rgba(239,68,68,0.1);
+          border:1px solid rgba(239,68,68,0.3);color:var(--red);border-radius:12px;
+          padding:14px 18px;margin-bottom:16px;font-size:0.85em;"></div>
+
+      <!-- Add device form -->
+      <div class="form-card fade-up">
+        <div class="table-title" style="margin-bottom:14px;">+ Add a device</div>
+        <form id="deviceForm" class="form-grid">
+          <div class="form-field">
+            <label>Device name</label>
+            <input type="text" id="fName" placeholder="e.g. Ceiling Fan" required>
+          </div>
+          <div class="form-field">
+            <label>Wattage (W)</label>
+            <input type="number" id="fWattage" placeholder="70" min="1" required>
+          </div>
+          <div class="form-field">
+            <label>Hrs / day</label>
+            <input type="number" id="fHours" placeholder="10" min="0" max="24" step="0.5" required>
+          </div>
+          <div class="form-field">
+            <label>Category</label>
+            <select id="fCategory">
+              <option>Cooling</option>
+              <option>Kitchen</option>
+              <option>Entertainment</option>
+              <option>Lighting</option>
+              <option>Heating</option>
+              <option>Laundry</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-field" style="display:flex;flex-direction:column;">
+            <label>Status</label>
+            <label class="switch"><input type="checkbox" id="fOn" checked><span class="slider"></span></label>
+          </div>
+          <button class="btn" type="submit">+ Add Device</button>
+        </form>
+        <div id="deviceFormMsg" style="font-size:0.78em;margin-top:10px;min-height:1.2em;"></div>
+
+        <div class="tariff-row">
+          <label>⚡ Electricity tariff (used to calculate your bill estimate):</label>
+          <span>₹</span><input type="number" id="tariffInput" step="0.1" min="0" value="6.5">
+          <span style="font-size:0.8em;color:var(--muted);">per kWh</span>
+          <button class="btn" type="button" id="saveTariff" style="padding:6px 14px;">Save Tariff</button>
+          <span id="tariffMsg" style="font-size:0.78em;color:var(--emerald);"></span>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi k-em fade-up d1">
+          <div class="kpi-icon">⚡</div>
+          <div class="kpi-label">Current Power</div>
+          <div class="kpi-value" id="kpiCurrent">0 W</div>
+          <div class="kpi-sub" id="kpiCurrentSub">from devices switched on</div>
+        </div>
+        <div class="kpi k-ye fade-up d2">
+          <div class="kpi-icon">📅</div>
+          <div class="kpi-label">Daily Usage</div>
+          <div class="kpi-value" id="kpiDaily">0 kWh</div>
+          <div class="kpi-sub" id="kpiDailyBill">₹0.00 / day</div>
+        </div>
+        <div class="kpi k-pu fade-up d3">
+          <div class="kpi-icon">🧾</div>
+          <div class="kpi-label">Monthly Bill</div>
+          <div class="kpi-value" id="kpiMonthlyBill">₹0</div>
+          <div class="kpi-sub" id="kpiMonthlyUnits">0 units / month</div>
+        </div>
+        <div class="kpi k-or fade-up d4">
+          <div class="kpi-icon">🔌</div>
+          <div class="kpi-label">Devices</div>
+          <div class="kpi-value" id="kpiDeviceCount">0</div>
+          <div class="kpi-sub" id="kpiDeviceOn">0 currently on</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-row r2">
+        <div class="chart-card">
+          <div class="chart-head">
+            <span class="chart-title">Live Simulated Power</span>
+            <span class="chart-badge cb-g">● Live</span>
+          </div>
+          <canvas id="predLiveChart" height="90"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <span class="chart-title">Device-wise Contribution</span>
+            <span class="chart-badge cb-y">kWh / day</span>
+          </div>
+          <canvas id="predPieChart" height="90"></canvas>
+        </div>
+      </div>
+
+      <!-- Highest / lowest -->
+      <div class="chart-row r22">
+        <div class="tip-card">
+          <div class="tip-icon">🔺</div>
+          <div>
+            <div class="tip-title">Highest consuming device</div>
+            <div class="tip-text" id="highestDevice">—</div>
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🔻</div>
+          <div>
+            <div class="tip-title">Lowest consuming device</div>
+            <div class="tip-text" id="lowestDevice">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device table -->
+      <div class="table-card">
+        <div class="table-head">
+          <div>
+            <div class="table-title">Your Devices</div>
+            <div class="table-hint">Toggle a device on/off to include it in the live simulation. Daily/weekly/monthly totals always use each device's configured hours/day.</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Device</th><th>Category</th><th>Wattage</th><th>Hrs/day</th>
+              <th>Daily kWh</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="deviceTableBody">
+            <tr><td colspan="7"><div class="empty-state"><div class="ei">🏠</div>No devices yet — add your first one above.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+<script type="module">
+import { watchAuth, logOut } from "/static/js/auth.js";
+import {
+  addDevice, updateDevice, deleteDevice, listenDevices,
+  getSettings, setSettings, addPredictionSnapshot
+} from "/static/js/firestore-service.js";
+import { computeSnapshot } from "/static/js/prediction-engine.js";
+
+document.documentElement.style.visibility = "hidden";
+
+let uid = null;
+let devices = [];
+let tariff = 6.5;
+let liveHistory = { labels: [], data: [] };
+let lastSnapshotWrite = 0;
+
+// ── Clock ──
+function tickClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ── Toast ──
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function showFirestoreError(err){
+  const banner = document.getElementById('firestoreErrorBanner');
+  if (!banner) return;
+  banner.style.display = 'block';
+  banner.textContent = err && err.code === 'permission-denied'
+    ? '⚠️ Firestore is blocking reads/writes. Open the Firebase console → Firestore Database → Rules, paste the contents of firestore.rules from this project, and click Publish. Then reload this page.'
+    : '⚠️ Could not reach Firestore: ' + (err && err.message ? err.message : err);
+}
+
+// ── Charts ──
+const liveCtx = document.getElementById('predLiveChart').getContext('2d');
+const liveChart = new Chart(liveCtx, {
+  type:'line',
+  data:{ labels:[], datasets:[{ label:'Watts', data:[], borderColor:'#10b981',
+    backgroundColor:'rgba(16,185,129,0.12)', fill:true, tension:0.35, pointRadius:0 }] },
+  options:{ responsive:true, plugins:{legend:{display:false}},
+    scales:{ x:{display:false}, y:{beginAtZero:true, grid:{color:'rgba(255,255,255,0.05)'}} } }
+});
+
+const pieCtx = document.getElementById('predPieChart').getContext('2d');
+const pieChart = new Chart(pieCtx, {
+  type:'doughnut',
+  data:{ labels:[], datasets:[{ data:[], backgroundColor:
+    ['#10b981','#f59e0b','#8b5cf6','#f97316','#3b82f6','#ec4899','#ef4444','#facc15'] }] },
+  options:{ responsive:true, plugins:{legend:{position:'bottom', labels:{color:'#94a3b8', boxWidth:10, font:{size:10}}}} }
+});
+
+// ── Device table rendering ──
+function renderDevices(){
+  const body = document.getElementById('deviceTableBody');
+  document.getElementById('kpiDeviceCount').textContent = devices.length;
+  document.getElementById('kpiDeviceOn').textContent = devices.filter(d=>d.isOn).length + ' currently on';
+
+  if (!devices.length){
+    body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="ei">🏠</div>No devices yet — add your first one above.</div></td></tr>';
+    return;
+  }
+
+  body.innerHTML = devices.map(d => {
+    const dailyKwh = (d.wattage * (d.hoursPerDay||0) / 1000).toFixed(2);
+    return `<tr>
+      <td class="dev-name">${d.name}</td>
+      <td>${d.category}</td>
+      <td class="mono">${d.wattage} W</td>
+      <td class="mono">${d.hoursPerDay} h</td>
+      <td class="mono em">${dailyKwh} kWh</td>
+      <td><label class="switch"><input type="checkbox" ${d.isOn?'checked':''} data-toggle="${d.id}"><span class="slider"></span></label></td>
+      <td><div class="row-actions"><div class="icon-action danger" data-delete="${d.id}" title="Delete">🗑</div></div></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('[data-toggle]').forEach(el=>{
+    el.addEventListener('change', (e)=>{
+      updateDevice(uid, el.dataset.toggle, { isOn: e.target.checked });
+    });
+  });
+  body.querySelectorAll('[data-delete]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if (confirm('Remove this device?')) {
+        deleteDevice(uid, el.dataset.delete);
+        toast('Device removed');
+      }
+    });
+  });
+}
+
+// ── Simulation tick (every 5s) ──
+function tick(){
+  if (!devices.length){
+    document.getElementById('kpiCurrent').textContent = '0 W';
+    return;
+  }
+  const snap = computeSnapshot(devices, tariff);
+
+  document.getElementById('kpiCurrent').textContent = Math.round(snap.currentWatts) + ' W';
+  document.getElementById('kpiCurrentSub').textContent = devices.filter(d=>d.isOn).length + ' device(s) switched on';
+  document.getElementById('kpiDaily').textContent = snap.dailyKwh.toFixed(2) + ' kWh';
+  document.getElementById('kpiDailyBill').textContent = '₹' + snap.dailyBill.toFixed(2) + ' / day';
+  document.getElementById('kpiMonthlyBill').textContent = '₹' + Math.round(snap.monthlyBill);
+  document.getElementById('kpiMonthlyUnits').textContent = snap.monthlyKwh.toFixed(1) + ' units / month';
+
+  document.getElementById('highestDevice').textContent = snap.highest
+    ? `${snap.highest.name} — ${snap.highest.dailyKwh.toFixed(2)} kWh/day (${snap.highest.watts}W)` : '—';
+  document.getElementById('lowestDevice').textContent = snap.lowest
+    ? `${snap.lowest.name} — ${snap.lowest.dailyKwh.toFixed(2)} kWh/day (${snap.lowest.watts}W)` : '—';
+
+  // Live line chart — keep last 20 ticks
+  const t = new Date().toLocaleTimeString().slice(0,5);
+  liveHistory.labels.push(t); liveHistory.data.push(Math.round(snap.currentWatts));
+  if (liveHistory.labels.length > 20){ liveHistory.labels.shift(); liveHistory.data.shift(); }
+  liveChart.data.labels = liveHistory.labels;
+  liveChart.data.datasets[0].data = liveHistory.data;
+  liveChart.update();
+
+  // Pie chart — device-wise daily kWh contribution
+  pieChart.data.labels = snap.contributions.map(c=>c.name);
+  pieChart.data.datasets[0].data = snap.contributions.map(c=>c.dailyKwh.toFixed(3));
+  pieChart.update();
+
+  // Throttle Firestore writes to once every 15s to stay well within free-tier limits
+  const now = Date.now();
+  if (now - lastSnapshotWrite > 15000){
+    lastSnapshotWrite = now;
+    addPredictionSnapshot(uid, {
+      currentWatts: snap.currentWatts,
+      dailyKwh: snap.dailyKwh,
+      monthlyKwh: snap.monthlyKwh,
+      monthlyBill: snap.monthlyBill
+    }).catch(()=>{});
+  }
+}
+
+// ── Add device form ──
+document.getElementById('deviceForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('deviceFormMsg');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  msgEl.textContent = '';
+  msgEl.style.color = 'var(--emerald)';
+
+  const name = document.getElementById('fName').value.trim();
+  const wattage = document.getElementById('fWattage').value;
+  const hoursPerDay = document.getElementById('fHours').value;
+
+  if (!name || !wattage || !hoursPerDay){
+    msgEl.style.color = 'var(--red)';
+    msgEl.textContent = 'Please fill in device name, wattage, and hours/day.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  try {
+    await addDevice(uid, {
+      name, wattage, hoursPerDay,
+      category: document.getElementById('fCategory').value,
+      isOn: document.getElementById('fOn').checked
+    });
+    e.target.reset();
+    document.getElementById('fOn').checked = true;
+    msgEl.textContent = 'Device added ✓';
+    toast('Device added');
+  } catch (err) {
+    console.error('addDevice failed:', err);
+    msgEl.style.color = 'var(--red)';
+    if (err.code === 'permission-denied') {
+      msgEl.textContent = 'Permission denied — make sure firestore.rules has been published in the Firebase console (Firestore Database → Rules → Publish).';
+    } else {
+      msgEl.textContent = 'Could not add device: ' + (err.message || err);
+    }
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+document.getElementById('saveTariff').addEventListener('click', async ()=>{
+  const tariffMsgEl = document.getElementById('tariffMsg');
+  tariffMsgEl.style.color = 'var(--emerald)';
+  try {
+    tariff = parseFloat(document.getElementById('tariffInput').value) || 6.5;
+    await setSettings(uid, { tariffPerKwh: tariff });
+    tariffMsgEl.textContent = 'Saved ✓';
+  } catch (err) {
+    console.error('setSettings failed:', err);
+    tariffMsgEl.style.color = 'var(--red)';
+    tariffMsgEl.textContent = err.code === 'permission-denied'
+      ? 'Permission denied — publish firestore.rules in the Firebase console.'
+      : 'Could not save: ' + (err.message || err);
+  }
+  setTimeout(()=>{ tariffMsgEl.textContent=''; }, 4000);
+});
+
+// ── Auth guard + boot ──
+watchAuth(async (user)=>{
+  if (!user){ window.location.href = '/'; return; }
+  uid = user.uid;
+  document.documentElement.style.visibility = 'visible';
+
+  document.querySelectorAll('.user-name').forEach(el=>el.textContent=user.email);
+  document.querySelectorAll('.user-avatar').forEach(el=>el.textContent=(user.email||'U').charAt(0).toUpperCase());
+  document.querySelectorAll('[data-logout]').forEach(el=>{
+    el.addEventListener('click', ()=>{ logOut().then(()=>window.location.href='/'); });
+  });
+
+  const settings = await getSettings(uid).catch((err)=>{
+    console.error('getSettings failed:', err);
+    showFirestoreError(err);
+    return { tariffPerKwh: 6.5 };
+  });
+  tariff = settings.tariffPerKwh || 6.5;
+  document.getElementById('tariffInput').value = tariff;
+
+  listenDevices(uid, (list)=>{
+    devices = list;
+    renderDevices();
+  }, showFirestoreError);
+
+  tick();
+  setInterval(tick, 5000);
+});
+</script>
+<script src="/static/js/sidebar-toggle.js"></script>
+</body>
+</html>
+
