@@ -43,32 +43,35 @@ device_status = {
     "Washing Machine": False,
     "Microwave":       False,
     "Water Heater":    False,
-    "LED Bulb 1":      True,   # set default on/off as you like
+    "LED Bulb 1":      True,
     "LED Bulb 2":      True,
     "LED Bulb 3":      False,
     "LED Bulb 4":      False,
 }
 
-import traceback
-
+# ── Background data collection loop ──────────────────────────
 def collection_loop():
     while True:
         try:
             raw = get_api_data()
             df  = clean_and_hybrid(raw)
             df["active"] = df["device"].map(lambda d: device_status.get(d, True))
+
             active_df    = df[df["active"] == True]
             total_hybrid = active_df["hybrid_power"].sum() if len(active_df) else 0.0
-            predicted    = predict_power(
+
+            predicted = predict_power(
                 df["voltage"].mean(),
                 df["current"].mean(),
                 total_hybrid
             ) if len(active_df) else 0.0
-            category     = classify_power(predicted)
-            kwh, bill    = calculate_bill(predicted)
-            timestamp    = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            global latest_reality
-            latest_reality = {
+
+            category  = classify_power(predicted)
+            kwh, bill = calculate_bill(predicted)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            global latest_data
+            latest_data = {
                 "devices":         df.to_dict(orient="records"),
                 "total_predicted": predicted,
                 "category":        category,
@@ -76,6 +79,7 @@ def collection_loop():
                 "bill":            bill,
                 "timestamp":       timestamp
             }
+
             for _, row in active_df.iterrows():
                 insert_reading({
                     "timestamp":       timestamp,
@@ -88,11 +92,33 @@ def collection_loop():
                     "predicted_total": predicted,
                     "category":        category
                 })
+
         except Exception as e:
             print(f"❌ REALITY LOOP ERROR: {e}", flush=True)
             traceback.print_exc()
+
         time.sleep(5)
-# ── Routes ────────────────────────────────────────────────────
+
+# Start the background thread — this MUST run for the dashboard to have data
+threading.Thread(target=collection_loop, daemon=True).start()
+
+# ── Page routes ───────────────────────────────────────────────
+
+@app.route("/")
+def landing():
+    return render_template("landing.html")
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("index.html")
+
+@app.route("/prediction")
+def prediction():
+    return render_template("prediction.html")
+
+@app.route("/compare")
+def compare():
+    return render_template("compare.html")
 
 @app.route("/history")
 def history():
@@ -101,6 +127,8 @@ def history():
 @app.route("/guide")
 def guide():
     return render_template("guide.html")
+
+# ── Reality API ───────────────────────────────────────────────
 
 @app.route("/api/data")
 def api_data():
@@ -120,6 +148,8 @@ def api_history():
 def toggle(device):
     device_status[device] = not device_status.get(device, True)
     return jsonify({"device": device, "status": device_status[device]})
+
+# ── Device management API ───────────────────────────────────────
 
 @app.route("/api/devices", methods=["GET"])
 def list_devices():
@@ -160,6 +190,8 @@ def remove_device(device):
         return jsonify({"error": "Device not found."}), 404
     return jsonify({"device": device, "removed": True})
 
+# ── Export ────────────────────────────────────────────────────
+
 @app.route("/export")
 def export():
     conn = sqlite3.connect("power_data.db")
@@ -178,21 +210,6 @@ def export():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment;filename=power_data.csv"}
     )
-@app.route("/")
-def landing():
-    return render_template("landing.html")
-
-@app.route("/dashboard")
-def dashboard():
-    return render_template("index.html")
-
-@app.route("/prediction")
-def prediction():
-    return render_template("prediction.html")
-
-@app.route("/compare")
-def compare():
-    return render_template("compare.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
