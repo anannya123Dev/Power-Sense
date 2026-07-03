@@ -10,6 +10,7 @@ import threading
 import time
 import io
 import csv
+import traceback
 
 app = Flask(__name__)
 init_db()
@@ -48,32 +49,26 @@ device_status = {
     "LED Bulb 4":      False,
 }
 
+import traceback
+
 def collection_loop():
     while True:
         try:
-            with devices_lock:
-                master_snapshot = list(device_master)
-
-            raw = get_api_data(master_snapshot)
+            raw = get_api_data()
             df  = clean_and_hybrid(raw)
-
             df["active"] = df["device"].map(lambda d: device_status.get(d, True))
-
             active_df    = df[df["active"] == True]
             total_hybrid = active_df["hybrid_power"].sum() if len(active_df) else 0.0
-
-            predicted = predict_power(
+            predicted    = predict_power(
                 df["voltage"].mean(),
                 df["current"].mean(),
                 total_hybrid
             ) if len(active_df) else 0.0
-
-            category  = classify_power(predicted)
-            kwh, bill = calculate_bill(predicted)
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            global latest_data
-            latest_data = {
+            category     = classify_power(predicted)
+            kwh, bill    = calculate_bill(predicted)
+            timestamp    = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            global latest_reality
+            latest_reality = {
                 "devices":         df.to_dict(orient="records"),
                 "total_predicted": predicted,
                 "category":        category,
@@ -81,7 +76,6 @@ def collection_loop():
                 "bill":            bill,
                 "timestamp":       timestamp
             }
-
             for _, row in active_df.iterrows():
                 insert_reading({
                     "timestamp":       timestamp,
@@ -94,14 +88,10 @@ def collection_loop():
                     "predicted_total": predicted,
                     "category":        category
                 })
-
         except Exception as e:
-            print(f"Collection error: {e}")
-
+            print(f"❌ REALITY LOOP ERROR: {e}", flush=True)
+            traceback.print_exc()
         time.sleep(5)
-
-threading.Thread(target=collection_loop, daemon=True).start()
-
 # ── Routes ────────────────────────────────────────────────────
 
 @app.route("/history")
